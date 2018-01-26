@@ -1,0 +1,99 @@
+// local includes
+#include "Utils.h"
+
+// STL includes
+#include <iostream>
+#include <map>
+
+// ROOT includes
+#include "TString.h"
+
+
+template <typename T>
+T & Event::GetVar(const TString & name)
+{
+
+  std::map<TString, VarBase *>::iterator it = varMap.find( name );
+  if (it == varMap.end()) {
+    std::cout << "Event::GetVar() : Error - " << name.Data() << " is not in map!" << std::endl;
+    throw(0);
+  }
+  
+  Var<T> * var = dynamic_cast<Var<T> *>(it->second);
+  if ( ! var ) {
+    std::cout << "Event::GetVar() : Wrong type! name = " << name.Data() << std::endl;
+    throw(0);
+  }
+  
+  return var->value;
+
+}
+
+
+template <typename T>
+const T & Event::GetVar(const TString & name) const
+{
+
+  std::map<TString, VarBase *>::const_iterator it = varMap.find( name );
+  if (it == varMap.end()) {
+    std::cout << "Event::GetVar() const : Error - " << name.Data() << " is not in map!" << std::endl;
+    throw(0);
+  }
+  
+  const Var<T> * var = dynamic_cast<Var<T> *>(it->second);
+  if ( ! var ) {
+    std::cout << "Event::GetVar() const : Wrong type! name = " << name.Data() << std::endl;
+    throw(0);
+  }
+  
+  return var->value;
+
+}
+
+
+template<typename T>
+void Event::SetVar(const TString & name, const T & value)
+{
+  
+  std::map<TString, VarBase *>::iterator it = varMap.find( name );
+  if (it == varMap.end()) {
+    varMap.insert( std::make_pair(name, static_cast<VarBase*>(new Var<T>(value))) );
+  }
+  else {
+    Var<T> * var = dynamic_cast<Var<T> *>(it->second);
+    if ( ! var ) {
+      std::cout << "Event::SetVar() const : Wrong type! name = " << name.Data() << std::endl;
+      throw(0);
+    }
+    var->value = value;
+  }
+
+}
+
+
+template<typename T>
+void Event::ConnectVariable(const TString & name, TTree * tree, const std::vector<TString> * variables)
+{
+
+  if ( variables && Utils::FindVariable(name, *variables) == false ) {
+    //std::cout << "Event::ConnectVariable() : NOT Connecting " << name.Data() << std::endl;
+    return;
+  }
+  
+  std::map<TString, VarBase *>::iterator it = varMap.find( name );
+  if (it != varMap.end()) {
+    std::cout << "Event::ConnectVariable() : Error - " << name.Data() << " is already in map!" << std::endl;
+    return;
+  }
+
+  Var<T> * var = new Var<T>();
+  varMap.insert( std::make_pair(name, (VarBase*)var) );
+
+  std::cout << "Event::ConnectVariable() : Connecting " << name.Data() << std::endl;
+  tree->SetBranchStatus(name, 1);
+  tree->SetBranchAddress(name, &(var->value)); 
+
+}
+  
+
+
